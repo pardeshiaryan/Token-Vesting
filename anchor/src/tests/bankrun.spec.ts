@@ -170,3 +170,5 @@ describe("Vesting Smart Contract Tests", () => {
     console.log("Claim Tokens transaction signature", tx3);
   });
 });
+
+

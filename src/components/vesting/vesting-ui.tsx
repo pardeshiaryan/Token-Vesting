@@ -7,6 +7,11 @@ import {
   useVestingProgramAccount,
 } from "./vesting-data-access";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { useCluster } from "../cluster/cluster-data-access";
+import { useTransactionToast } from "../use-transaction-toast";
+import { toast } from "sonner";
 
 export function VestingCreate() {
   const { createVestingAccount } = useVestingProgram();
@@ -255,7 +260,7 @@ function VestingCard({ account }: { account: PublicKey }) {
               onChange={(e) => setBeneficiary(e.target.value)}
               className="input input-bordered w-full max-w-xs"
             />
-            <input
+            {/* <input
               type="text"
               placeholder="Start Time"
               value={startTime || ""}
@@ -275,7 +280,23 @@ function VestingCard({ account }: { account: PublicKey }) {
               value={cliffTime || ""}
               onChange={(e) => setCliffTime(parseInt(e.target.value))}
               className="input input-bordered w-full max-w-xs"
-            />
+            /> */}
+            
+<input
+  type="datetime-local"
+  onChange={(e) => setStartTime(Math.floor(new Date(e.target.value).getTime() / 1000))}
+  className="input input-bordered w-full max-w-xs"
+/>
+<input
+  type="datetime-local"
+  onChange={(e) => setEndTime(Math.floor(new Date(e.target.value).getTime() / 1000))}
+  className="input input-bordered w-full max-w-xs"
+/>
+<input
+  type="datetime-local"
+  onChange={(e) => setCliffTime(Math.floor(new Date(e.target.value).getTime() / 1000))}
+  className="input input-bordered w-full max-w-xs"
+/>
             <input
               type="text"
               placeholder="Total Allocation"
@@ -301,6 +322,103 @@ function VestingCard({ account }: { account: PublicKey }) {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+
+export function VestingClaim() {
+  const { publicKey } = useWallet();
+  const { program } = useVestingProgram();
+  const { cluster } = useCluster();
+  const transactionToast = useTransactionToast();
+
+  // Fetch all employee accounts where beneficiary = connected wallet
+  const employeeAccounts = useQuery({
+    queryKey: ["employee-accounts", { cluster, publicKey }],
+    queryFn: async () => {
+      if (!publicKey) return [];
+      return program.account.employeeAccount.all([
+        {
+          memcmp: {
+            offset: 8, // beneficiary is first field after discriminator
+            bytes: publicKey.toBase58(),
+          },
+        },
+      ]);
+    },
+    enabled: !!publicKey,
+  });
+
+  if (!publicKey) return <p>Connect your wallet to claim tokens</p>;
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold text-center">My Vesting Claims</h2>
+      {employeeAccounts.isLoading ? (
+        <span className="loading loading-spinner loading-lg"></span>
+      ) : employeeAccounts.data?.length ? (
+        employeeAccounts.data.map((emp: any) => (
+          <ClaimCard
+            key={emp.publicKey.toString()}
+            employeeAccount={emp}
+          />
+        ))
+      ) : (
+        <p className="text-center opacity-60">No vesting accounts found for your wallet</p>
+      )}
+    </div>
+  );
+}
+
+function ClaimCard({ employeeAccount }: { employeeAccount: any }) {
+  const { program } = useVestingProgram();
+  const { cluster } = useCluster();
+  const transactionToast = useTransactionToast();
+  const { publicKey } = useWallet();
+
+  const claimTokens = useMutation({
+    mutationKey: ["claim-tokens", { cluster }],
+    mutationFn: async () => {
+      // Fetch the vesting account to get company name
+      const vestingAccount = await program.account.vestingAccount.fetch(
+        employeeAccount.account.vestingAccount
+      );
+
+      return program.methods
+        .claimTokens(vestingAccount.companyName)
+        .accounts({
+          beneficiary: publicKey,
+          employeeAccount: employeeAccount.publicKey,
+          vestingAccount: employeeAccount.account.vestingAccount,
+          mint: vestingAccount.mint,
+          treasuryTokenAccount: vestingAccount.treasuryTokenAccount,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    },
+    onSuccess: (tx) => transactionToast(tx),
+    onError: (e) => toast.error(`Claim failed: ${e.message}`),
+  });
+
+  const acc = employeeAccount.account;
+  const claimable = acc.totalAmount.toNumber() - acc.totalWithdrawn.toNumber();
+
+  return (
+    <div className="card card-bordered border-base-300 border-4">
+      <div className="card-body">
+        <p>Vesting Account: {acc.vestingAccount.toString().slice(0, 12)}...</p>
+        <p>Total Amount: {acc.totalAmount.toString()}</p>
+        <p>Withdrawn: {acc.totalWithdrawn.toString()}</p>
+        <p>Claimable: {claimable}</p>
+        <button
+          className="btn btn-primary"
+          onClick={() => claimTokens.mutate()}
+          disabled={claimTokens.isPending || claimable === 0}
+        >
+          {claimTokens.isPending ? "Claiming..." : "Claim Tokens"}
+        </button>
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ pub mod vesting {
     ) -> Result<()> {
         *ctx.accounts.vesting_account = VestingAccount {
             owner: ctx.accounts.signer.key(),
+            
             mint: ctx.accounts.mint.key(),
             treasury_token_account: ctx.accounts.treasury_token_account.key(),
             company_name,

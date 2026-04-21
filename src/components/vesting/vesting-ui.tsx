@@ -35,6 +35,7 @@ export function VestingCreate() {
         onChange={(e) => setCompany(e.target.value)}
         className="input input-bordered w-full max-w-xs"
       />
+      
       <input
         type="text"
         placeholder="Token Mint Address"
@@ -92,17 +93,106 @@ export function VestingList() {
   );
 }
 
+// function VestingCard({ account }: { account: PublicKey }) {
+//   const { accountQuery, createEmployeeVesting } = useVestingProgramAccount({
+//     account,
+//   });
+//   const [startTime, setStartTime] = useState(0);
+//   const [endTime, setEndTime] = useState(0);
+//   const [cliffTime, setCliffTime] = useState(0);
+//   const [totalAmount, setTotalAmount] = useState(0);
+// const [beneficiary, setBeneficiary] = useState("");
+
+//   const companyName = useMemo(
+//     () => accountQuery.data?.companyName ?? 0,
+//     [accountQuery.data?.companyName]
+//   );
+
+//   return accountQuery.isLoading ? (
+//     <span className="loading loading-spinner loading-lg"></span>
+//   ) : (
+//     <div className="card card-bordered border-base-300 border-4 text-neutral-content">
+//       <div className="card-body items-center text-center">
+//         <div className="space-y-6">
+//           <h2
+//             className="card-title justify-center text-3xl cursor-pointer"
+//             onClick={() => accountQuery.refetch()}
+//           >
+//             {companyName}
+//           </h2>
+//           <div className="card-actions justify-around">
+//             <input
+//               type="text"
+//               placeholder="Start Time"
+//               value={startTime || ""}
+//               onChange={(e) => setStartTime(parseInt(e.target.value))}
+//               className="input input-bordered w-full max-w-xs"
+//             />
+//             <input
+//               type="text"
+//               placeholder="End Time"
+//               value={endTime || ""}
+//               onChange={(e) => setEndTime(parseInt(e.target.value))}
+//               className="input input-bordered w-full max-w-xs"
+//             />
+//             <input
+//               type="text"
+//               placeholder="Cliff Time"
+//               value={cliffTime || ""}
+//               onChange={(e) => setCliffTime(parseInt(e.target.value))}
+//               className="input input-bordered w-full max-w-xs"
+//             />
+//             <input
+//               type="text"
+//               placeholder="Total Allocation"
+//               value={totalAmount || ""}
+//               onChange={(e) => setTotalAmount(parseInt(e.target.value))}
+//               className="input input-bordered w-full max-w-xs"
+//             />
+//             <input
+//   type="text"
+//   placeholder="Beneficiary Wallet Address"
+//   value={beneficiary}
+//   onChange={(e) => setBeneficiary(e.target.value)}
+//   className="input input-bordered w-full max-w-xs"
+// />
+
+//             <button
+//               className="btn btn-xs lg:btn-md btn-outline"
+//               onClick={() =>
+//   createEmployeeVesting.mutateAsync({
+//     startTime,
+//     endTime,
+//     totalAmount,
+//     cliffTime,
+//     beneficiary,
+//   })
+// }
+              
+//               disabled={createEmployeeVesting.isPending}
+//             >
+//               Create Employee Vesting Account
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+
 function VestingCard({ account }: { account: PublicKey }) {
-  const { accountQuery, createEmployeeVesting } = useVestingProgramAccount({
-    account,
-  });
+  const { accountQuery, createEmployeeVesting, employeeAccounts } =
+    useVestingProgramAccount({ account });
+
   const [startTime, setStartTime] = useState(0);
   const [endTime, setEndTime] = useState(0);
   const [cliffTime, setCliffTime] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [beneficiary, setBeneficiary] = useState("");
 
   const companyName = useMemo(
-    () => accountQuery.data?.companyName ?? 0,
+    () => accountQuery.data?.companyName ?? "",
     [accountQuery.data?.companyName]
   );
 
@@ -118,7 +208,53 @@ function VestingCard({ account }: { account: PublicKey }) {
           >
             {companyName}
           </h2>
+
+          {/* Employee list */}
+          <div className="w-full">
+            <h3 className="text-lg font-bold mb-2">Employee Vesting Accounts</h3>
+            {employeeAccounts.isLoading ? (
+              <span className="loading loading-spinner"></span>
+            ) : employeeAccounts.data?.length ? (
+              <table className="table table-xs w-full text-left">
+                <thead>
+                  <tr>
+                    <th>Beneficiary</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Cliff</th>
+                    <th>Total</th>
+                    <th>Withdrawn</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employeeAccounts.data.map((emp: any) => (
+                    <tr key={emp.publicKey.toString()}>
+                      <td title={emp.account.beneficiary.toString()}>
+                        {emp.account.beneficiary.toString().slice(0, 8)}...
+                      </td>
+                      <td>{emp.account.startTime.toString()}</td>
+                      <td>{emp.account.endTime.toString()}</td>
+                      <td>{emp.account.cliffTime.toString()}</td>
+                      <td>{emp.account.totalAmount.toString()}</td>
+                      <td>{emp.account.totalWithdrawn.toString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-sm opacity-60">No employees yet</p>
+            )}
+          </div>
+
+          {/* Create employee form */}
           <div className="card-actions justify-around">
+            <input
+              type="text"
+              placeholder="Beneficiary Wallet Address"
+              value={beneficiary}
+              onChange={(e) => setBeneficiary(e.target.value)}
+              className="input input-bordered w-full max-w-xs"
+            />
             <input
               type="text"
               placeholder="Start Time"
@@ -155,11 +291,13 @@ function VestingCard({ account }: { account: PublicKey }) {
                   endTime,
                   totalAmount,
                   cliffTime,
+                  beneficiary,
                 })
               }
               disabled={createEmployeeVesting.isPending}
             >
-              Create Employee Vesting Account
+              Create Employee Vesting Account{" "}
+              {createEmployeeVesting.isPending && "..."}
             </button>
           </div>
         </div>

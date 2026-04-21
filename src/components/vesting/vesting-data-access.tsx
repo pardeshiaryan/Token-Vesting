@@ -9,7 +9,8 @@ import { useCluster } from '../cluster/cluster-data-access'
 import { useAnchorProvider } from '../solana/solana-provider'
 import { useTransactionToast } from '../use-transaction-toast'
 import { toast } from 'sonner'
-
+import { BN } from "@coral-xyz/anchor";
+import { SystemProgram } from "@solana/web3.js";
 
 // import { getVestingProgram, getVestingProgramId } from "@token-vesting/anchor";
 import { getVestingProgram, getVestingProgramId } from "../../../anchor/src/token-vesting";
@@ -25,6 +26,7 @@ interface CreateEmployeeArgs {
   endTime: number;
   totalAmount: number;
   cliffTime: number;
+    beneficiary: string;
 }
 
 export function useVestingProgram() {
@@ -80,21 +82,77 @@ export function useVestingProgramAccount({ account }: { account: PublicKey }) {
     queryKey: ["vesting", "fetch", { cluster, account }],
     queryFn: () => program.account.vestingAccount.fetch(account),
   });
+  const employeeAccounts = useQuery({
+  queryKey: ["vesting", "employees", { cluster, account }],
+  queryFn: () =>
+    program.account.employeeAccount.all([
+      {
+        memcmp: {
+          offset: 8 + 32 + 8 + 8 + 8 + 8 + 8, // offset to vesting_account field
+          bytes: account.toBase58(),
+        },
+      },
+    ]),
+});
 
+  // const createEmployeeVesting = useMutation<string, Error, CreateEmployeeArgs>({
+  //   mutationKey: ["vesting", "close", { cluster, account }],
+  //   mutationFn: ({ startTime, endTime, totalAmount, cliffTime }) =>
+  //     program.methods
+  //       .createEmployeeVesting(startTime, endTime, totalAmount, cliffTime)
+  //       .rpc(),
+  //   onSuccess: (tx) => {
+  //     transactionToast(tx);
+  //     return accounts.refetch();
+  //   },
+  // });
   const createEmployeeVesting = useMutation<string, Error, CreateEmployeeArgs>({
-    mutationKey: ["vesting", "close", { cluster, account }],
-    mutationFn: ({ startTime, endTime, totalAmount, cliffTime }) =>
-      program.methods
-        .createEmployeeVesting(startTime, endTime, totalAmount, cliffTime)
-        .rpc(),
-    onSuccess: (tx) => {
-      transactionToast(tx);
-      return accounts.refetch();
-    },
-  });
+  mutationKey: ["vesting", "create-employee", { cluster, account }],
+  mutationFn: async ({ startTime, endTime, totalAmount, cliffTime, beneficiary }) => {
+    const beneficiaryPubkey = new PublicKey(beneficiary);
+
+    const companyName = accountQuery.data?.companyName;
+    if (!companyName) throw new Error("Company name not found");
+
+    const [vestingAccountPDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from(companyName)],
+      program.programId
+    );
+
+    const [employeeAccountPDA] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("employee_vesting"),
+        beneficiaryPubkey.toBuffer(),
+        vestingAccountPDA.toBuffer(),
+      ],
+      program.programId
+    );
+
+    return program.methods
+      .createEmployeeVesting(
+        new BN(startTime),
+        new BN(endTime),
+        new BN(totalAmount),
+        new BN(cliffTime)
+      )
+      .accounts({
+        owner: program.provider.publicKey,
+        beneficiary: beneficiaryPubkey,
+        vestingAccount: vestingAccountPDA,
+        employeeAccount: employeeAccountPDA,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+  },
+  onSuccess: (tx) => {
+    transactionToast(tx);
+    return accounts.refetch();
+  },
+});
 
   return {
     accountQuery,
     createEmployeeVesting,
+     employeeAccounts,
   };
 }

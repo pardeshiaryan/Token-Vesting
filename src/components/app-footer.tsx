@@ -14,7 +14,7 @@ export function AppFooter() {
           {/* brand */}
           <div>
             <h3 className="text-xl font-semibold text-white">
-              Placeholder
+              Automated Vesting System using Solana
             </h3>
             <p className="mt-3 text-sm leading-6 text-white/40 max-w-xs">
               Secure and transparent token vesting infrastructure built on

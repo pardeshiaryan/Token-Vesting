@@ -1,4 +1,5 @@
 'use client'
+
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
@@ -8,7 +9,11 @@ import { ThemeSelect } from '@/components/theme-select'
 import { ClusterUiSelect } from './cluster/cluster-ui'
 import { WalletButton } from '@/components/solana/solana-provider'
 
-export function AppHeader({ links = [] }: { links: { label: string; path: string }[] }) {
+export function AppHeader({
+  links = [],
+}: {
+  links: { label: string; path: string }[]
+}) {
   const pathname = usePathname()
   const [showMenu, setShowMenu] = useState(false)
 
@@ -17,63 +22,92 @@ export function AppHeader({ links = [] }: { links: { label: string; path: string
   }
 
   return (
-    <header className="relative z-50 px-4 py-2 bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-400">
-      <div className="mx-auto flex justify-between items-center">
-        <div className="flex items-baseline gap-4">
-          <Link className="text-xl hover:text-neutral-500 dark:hover:text-white" href="/">
-            <span>Placeholder</span>
-          </Link>
-          <div className="hidden md:flex items-center">
-            <ul className="flex gap-4 flex-nowrap items-center">
-              {links.map(({ label, path }) => (
-                <li key={path}>
-                  <Link
-                    className={`hover:text-neutral-500 dark:hover:text-white ${isActive(path) ? 'text-neutral-500 dark:text-white' : ''}`}
-                    href={path}
-                  >
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+    <header className="sticky top-0 z-50 border-b border-white/5 bg-black/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6">
+        {/* Brand */}
+        <Link href="/" className="flex min-w-0 items-center gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-400 font-black text-black shadow-lg shadow-emerald-500/20">
+            A
           </div>
-        </div>
 
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setShowMenu(!showMenu)}>
-          {showMenu ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </Button>
+          <div className="hidden sm:block min-w-0">
+            <h1 className="truncate text-lg font-bold leading-none text-white">
+              Automated Vesting System using Solana
+            </h1>
+            <p className="mt-1 text-[10px] uppercase tracking-[0.38em] text-white/35">
+              Smart Contract Payroll
+            </p>
+          </div>
+        </Link>
 
-        <div className="hidden md:flex items-center gap-4">
+        {/* Desktop Nav */}
+        <nav className="hidden lg:flex items-center gap-2">
+          {links.map(({ label, path }) => (
+            <Link
+              key={path}
+              href={path}
+              className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+                isActive(path)
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/55 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Desktop Actions */}
+        <div className="hidden md:flex items-center gap-3">
           <WalletButton />
           <ClusterUiSelect />
           <ThemeSelect />
         </div>
 
-        {showMenu && (
-          <div className="md:hidden fixed inset-x-0 top-[52px] bottom-0 bg-neutral-100/95 dark:bg-neutral-900/95 backdrop-blur-sm">
-            <div className="flex flex-col p-4 gap-4 border-t dark:border-neutral-800">
-              <ul className="flex flex-col gap-4">
-                {links.map(({ label, path }) => (
-                  <li key={path}>
-                    <Link
-                      className={`hover:text-neutral-500 dark:hover:text-white block text-lg py-2  ${isActive(path) ? 'text-neutral-500 dark:text-white' : ''} `}
-                      href={path}
-                      onClick={() => setShowMenu(false)}
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex flex-col gap-4">
-                <WalletButton />
-                <ClusterUiSelect />
-                <ThemeSelect />
-              </div>
+        {/* Mobile Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden text-white hover:bg-white/5"
+          onClick={() => setShowMenu(!showMenu)}
+        >
+          {showMenu ? (
+            <X className="h-6 w-6" />
+          ) : (
+            <Menu className="h-6 w-6" />
+          )}
+        </Button>
+      </div>
+
+      {/* Mobile Menu */}
+      {showMenu && (
+        <div className="border-t border-white/5 bg-black/95 backdrop-blur-xl md:hidden">
+          <div className="mx-auto max-w-7xl px-4 py-5 space-y-5">
+            <nav className="flex flex-col gap-2">
+              {links.map(({ label, path }) => (
+                <Link
+                  key={path}
+                  href={path}
+                  onClick={() => setShowMenu(false)}
+                  className={`rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+                    isActive(path)
+                      ? 'bg-white/10 text-white'
+                      : 'text-white/60 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+
+            <div className="space-y-3 border-t border-white/5 pt-4">
+              <WalletButton />
+              <ClusterUiSelect />
+              <ThemeSelect />
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </header>
   )
 }

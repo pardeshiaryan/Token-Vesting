@@ -44,7 +44,7 @@ export function DashboardFeature() {
       {/* hero */}
       <section className="max-w-7xl mx-auto px-6 pt-10 pb-20">
         <AppHero
-          title="Token Vesting Infrastructure"
+          title="Automated Vesting System using Solana"
           subtitle="Automate employee, advisor, and team token unlocks on Solana with transparent smart contracts."
         />
 
